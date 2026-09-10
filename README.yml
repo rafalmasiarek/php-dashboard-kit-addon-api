@@ -1,0 +1,26 @@
+name: dashboard-kit-addon-api
+repo_url: https://github.com/rafalmasiarek/php-dashboard-kit-addon-api
+license: BUSL-1.1
+license_change_date: "2099-01-01"
+license_contact: https://masiarek.pl/contact/?af_subject=Commercial+license+%E2%80%94+dashboard-kit-addon-api&af_message=Hello%2C+I+am+interested+in+a+commercial+license+for+dashboard-kit-addon-api.
+
+badges:
+  - name: Packagist Version
+    image: https://img.shields.io/packagist/v/rafalmasiarek/dashboard-kit-addon-api
+    url: https://packagist.org/packages/rafalmasiarek/dashboard-kit-addon-api
+  - name: Total Downloads
+    image: https://img.shields.io/packagist/dt/rafalmasiarek/dashboard-kit-addon-api
+    url: https://packagist.org/packages/rafalmasiarek/dashboard-kit-addon-api
+  - name: PHP
+    image: https://img.shields.io/packagist/php-v/rafalmasiarek/dashboard-kit-addon-api
+    url: https://packagist.org/packages/rafalmasiarek/dashboard-kit-addon-api
+  - name: License
+    image: https://img.shields.io/badge/license-BUSL--1.1-red
+    url: https://github.com/rafalmasiarek/php-dashboard-kit-addon-api/blob/main/LICENSE
+
+context: []
+
+authors:
+  - name: Rafał Masiarek
+    github: rafalmasiarek
+    website: https://masiarek.pl

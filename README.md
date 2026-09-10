@@ -1,0 +1,375 @@
+# dashboard-kit-addon-api
+
+API plugin for [rafalmasiarek/dashboard-kit](https://github.com/rafalmasiarek/php-dashboard-kit). Adds Bearer token authentication with per-route scope enforcement, admin UI for token and scope management, user self-service token page, and a structured audit trail.
+
+## Requirements
+
+- PHP 8.2+
+- `rafalmasiarek/dashboard-kit`
+- MySQL 8 or SQLite
+
+## Installation
+
+```bash
+composer require rafalmasiarek/dashboard-kit-addon-api
+```
+
+The plugin is registered automatically when the package is installed. No additional configuration is required.
+
+## Features
+
+### Token authentication
+
+Every versioned API route (`/v1/...`) is protected by a Bearer token:
+
+```http
+GET /v1/notes HTTP/1.1
+Authorization: Bearer <token>
+```
+
+Tokens are created by users from `/settings/api-tokens` or by admins from `/admin/api/tokens`.
+
+### Scope enforcement
+
+Routes declare required scopes. A token must carry all required scopes to pass:
+
+```php
+// modules/notes/module.php
+'api' => [
+    'v1' => [
+        'GET /'  => ['scopes' => ['notes:read'],  'handler' => ...],
+        'POST /' => ['scopes' => ['notes:write'], 'handler' => ...],
+    ],
+],
+```
+
+Super-scopes `*` and `admin:*` bypass all scope checks. Namespace wildcards (`notes:*`) satisfy any `notes:{action}` requirement.
+
+### Scope management
+
+Admins define global scopes and assign subsets to individual users:
+
+1. Create scopes at `/admin/api/scopes` (e.g. `notes:read`, `notes:write`)
+2. Assign scopes to a user via Admin → Users → API Scopes
+3. User can now create tokens using only their assigned scopes
+4. Admins can create tokens with any scope regardless of assignments
+
+### JSON response envelope
+
+All API responses follow a consistent shape:
+
+```json
+{
+  "status": "success",
+  "code": 200,
+  "message": "OK",
+  "data": {},
+  "errors": [],
+  "meta": {}
+}
+```
+
+Error responses:
+
+```json
+{
+  "status": "error",
+  "code": 403,
+  "message": "Insufficient scope.",
+  "data": {},
+  "errors": [],
+  "meta": { "required_scopes": ["notes:read"] }
+}
+```
+
+### Audit trail
+
+Every API request is logged to the `logger.api` channel (falls back to `logger.audit`):
+
+```
+api.token.allowed  token=5L9eh4oT…  user_id=abc  email=user@example.com  ip=1.2.3.4
+                   method=GET  path=/v1/notes  scopes_required=["notes:read"]  scopes_granted=["notes:read"]
+
+api.token.denied   deny_reason=insufficient_scope  token=5L9eh4oT…  ip=1.2.3.4
+                   method=POST  path=/v1/notes  scopes_required=["notes:write"]
+
+api.token.denied   deny_reason=missing_token   ip=1.2.3.4  method=GET  path=/v1/notes
+api.token.denied   deny_reason=invalid_token   ip=1.2.3.4  method=GET  path=/v1/notes
+```
+
+Token values are never logged in full — only the first 8 characters are stored as a correlation prefix.
+
+## Defining API routes
+
+Routes are declared under the `api` key in `module.php`. The contract — parameters, request body, and responses — is defined once at the top level. The framework uses it for both OpenAPI generation and runtime behavior: type casting, error map derivation, and response envelope building.
+
+```php
+'api' => [
+    'v1' => [
+        'GET /{id}' => [
+            'scopes'  => ['notes:read'],
+            'openapi' => [
+                'summary'     => 'Get a note',
+                'description' => 'Returns a single note by ID.',
+                'tags'        => ['notes'],
+            ],
+            'params' => [
+                'id' => ['in' => 'path', 'type' => 'integer', 'required' => true],
+            ],
+            'body' => [                             // optional — JSON schema of the request body
+                'type'       => 'object',
+                'required'   => ['body'],
+                'properties' => ['body' => ['type' => 'string']],
+            ],
+            'responses' => [
+                200 => ['description' => 'Note found', 'schema' => ['type' => 'object', ...]],
+                404 => ['description' => 'Note not found', 'code' => 'NOT_FOUND'],
+            ],
+            'handler' => function (array $params, mixed $body, ContainerInterface $c): array {
+                // $params['id'] is already cast to int (declared type: integer)
+                // $body is the parsed JSON request body (or [] when absent)
+                $stmt = $c->get(PDO::class)->prepare('SELECT * FROM notes WHERE id = ?');
+                $stmt->execute([$params['id']]);
+                $note = $stmt->fetch(PDO::FETCH_ASSOC);
+                return $note !== false
+                    ? ['data' => $note]
+                    : ['error' => 'NOT_FOUND'];
+            },
+        ],
+    ],
+],
+```
+
+### Handler return shape
+
+| Return value | Result |
+|---|---|
+| `['data' => $payload]` | 200 OK |
+| `['data' => ..., 'http' => 201, 'message' => 'Created']` | Custom status and message |
+| `['error' => 'CODE']` | HTTP status and message from `responses` declaration |
+| `['error' => 'CODE', 'message' => 'Custom message.']` | Overrides the message from `responses` |
+| `['error' => 'CODE', 'field' => 'email', 'detail' => '...']` | Adds `field` and `detail` to `errors[0]` |
+| `['error' => 'CODE', 'http' => 410]` | Overrides the HTTP status from `responses` |
+
+`field` and `detail` are appended to the `errors` array alongside `code`:
+
+```json
+{
+  "errors": [{ "code": "BODY_REQUIRED", "field": "body", "detail": "Must be at least 1 character." }]
+}
+```
+
+All override keys can be combined freely:
+
+```php
+return ['error' => 'VALIDATION_FAILED', 'message' => 'Email is invalid.', 'field' => 'email', 'detail' => 'Must contain @.'];
+```
+
+### What the framework does automatically
+
+- Casts path and query params to declared types (`integer`, `number`, `boolean`, `string`)
+- Derives the error map from `responses` entries that carry a `'code'` key
+- Validates the request body root type and per-property types before calling the handler
+- Calls `JsonHandler::ok()` or `JsonHandler::err()` with the correct envelope
+- Builds OpenAPI `parameters`, `requestBody`, and `responses` from the same top-level keys
+- For paginated endpoints: injects `page` / `limit` / `offset` into `$params`, computes the `pagination` field, and adds `page` / `per_page` query params to the OpenAPI spec automatically
+
+### params
+
+Declares path and query parameters. The `type` field drives both OpenAPI and runtime casting:
+
+```php
+'params' => [
+    'id'     => ['in' => 'path',  'type' => 'integer', 'required' => true],
+    'page'   => ['in' => 'query', 'type' => 'integer'],
+    'active' => ['in' => 'query', 'type' => 'boolean'],
+],
+```
+
+Supported types: `integer`, `number`, `boolean`, `string`.
+
+### body
+
+Optional. Declares the JSON schema of the request body. Used as the OpenAPI `requestBody` schema and made available to the handler as `$body`:
+
+```php
+'body' => [
+    'type'       => 'object',
+    'required'   => ['title'],
+    'properties' => [
+        'title' => ['type' => 'string', 'minLength' => 1],
+        'draft' => ['type' => 'boolean'],
+    ],
+],
+```
+
+The framework validates the body before calling the handler and returns an error if the structure is invalid:
+
+| Error code | HTTP | Condition |
+|---|---|---|
+| `MALFORMED_JSON` | 400 | `Content-Type: application/json` sent with non-JSON content |
+| `INVALID_BODY_TYPE` | 400 | Body root type does not match the declared `type` |
+| `INVALID_FIELD_TYPE` | 422 | A declared property has the wrong type |
+
+These errors are returned by the framework directly — they do not need to be listed in the route's `responses` declaration.
+
+### responses
+
+Declares all possible response codes. Entries with a `'code'` key become part of the runtime error map; entries with a `'schema'` key describe the `data` payload in the OpenAPI spec:
+
+```php
+'responses' => [
+    200 => [
+        'description' => 'Notes list',
+        'schema'      => ['type' => 'array', 'items' => ['type' => 'object']],
+    ],
+    201 => ['description' => 'Created'],          // data: {} (no schema needed)
+    404 => ['description' => 'Not found', 'code' => 'NOT_FOUND'],
+    422 => ['description' => 'body is required',  'code' => 'BODY_REQUIRED'],
+],
+```
+
+### pagination
+
+Optional. Enables automatic pagination for list endpoints. When declared, the framework injects `page`, `limit`, and `offset` into `$params` and computes the `pagination` envelope field from the `total` key returned by the handler:
+
+```php
+'GET /' => [
+    'scopes'     => ['notes:read'],
+    'pagination' => [
+        'default_limit' => 20,   // items per page when client does not specify
+        'max_limit'     => 100,  // upper cap on per_page
+    ],
+    'responses' => [
+        200 => ['description' => 'Notes list', 'schema' => ['type' => 'array', ...]],
+    ],
+    'handler' => function (array $params, mixed $body, ContainerInterface $c): array {
+        // $params['page'], $params['limit'], $params['offset'] are injected automatically
+        $total = (int) $db->query('SELECT COUNT(*) FROM notes')->fetchColumn();
+        $stmt  = $db->prepare('SELECT * FROM notes LIMIT :limit OFFSET :offset');
+        $stmt->bindValue(':limit',  $params['limit'],  PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $params['offset'], PDO::PARAM_INT);
+        $stmt->execute();
+        return ['data' => $stmt->fetchAll(PDO::FETCH_ASSOC), 'total' => $total];
+    },
+],
+```
+
+Client query params: `?page=2&per_page=10`. The response includes a top-level `pagination` object:
+
+```json
+{
+  "status": "success",
+  "code": 200,
+  "message": "OK",
+  "data": [...],
+  "errors": [],
+  "meta": {},
+  "pagination": {
+    "count": 86,
+    "page": 2,
+    "per_page": 10,
+    "pages": 9,
+    "has_more": true
+  }
+}
+```
+
+The `pagination` field is absent from non-paginated endpoints. The OpenAPI spec automatically includes `page` and `per_page` query parameters and a representative pagination example for 2xx responses.
+
+### OpenAPI specification
+
+A full OpenAPI 3.1 spec is generated automatically from all module route definitions and served at a configurable endpoint:
+
+```php
+// index.php
+'api' => [
+    'prefix'  => '',          // optional: 'api' → routes at /api/v1/*, spec at /api/openapi.json
+    'openapi' => [
+        'path'       => '/openapi.json',  // default: /{prefix}/openapi.json
+        'visibility' => 'admin',          // 'admin' | 'user' | 'public'
+        'info' => [
+            'title'   => 'My App API',
+            'version' => '1.0.0',
+        ],
+        'servers' => [['url' => '/']],
+    ],
+],
+```
+
+The `openapi` sub-key on a route carries documentation-only metadata:
+
+```php
+'openapi' => [
+    'summary'     => 'List notes',
+    'description' => 'Returns all notes ordered by creation date descending.',
+    'tags'        => ['notes'],
+    'deprecated'  => false,
+],
+```
+
+Standard 401/403 responses are auto-injected for all routes that declare scopes.
+
+Other plugins can extend the spec when the API plugin is installed:
+
+```php
+if ($container->has(OpenApiRegistry::class)) {
+    $container->get(OpenApiRegistry::class)
+        ->registerTag('scheduler', 'Scheduler endpoints');
+}
+```
+
+To use a dedicated log channel, add `logger.api` to your dashboard-kit logging configuration:
+
+```php
+'logging' => [
+    'channels' => [
+        'api' => ['path' => storage_path('logs/api.log'), 'level' => 'info'],
+    ],
+],
+```
+
+## Admin routes
+
+| Route | Description |
+|-------|-------------|
+| `GET /admin/api/scopes` | List all scopes |
+| `POST /admin/api/scopes` | Create a scope |
+| `POST /admin/api/scopes/{id}/delete` | Delete a scope |
+| `GET /admin/api/tokens` | List all tokens (all users) |
+| `POST /admin/api/tokens` | Create a token (any scope) |
+| `POST /admin/api/tokens/{token}/revoke` | Revoke any token |
+| `GET /admin/api/users/{id}/scopes` | View/edit scope assignments for a user |
+| `POST /admin/api/users/{id}/scopes` | Save scope assignments |
+
+## User routes
+
+| Route | Description |
+|-------|-------------|
+| `GET /settings/api-tokens` | List own tokens, create new token |
+| `POST /settings/api-tokens` | Create token (assigned scopes only) |
+| `POST /settings/api-tokens/{token}/revoke` | Revoke own token |
+
+## Database tables
+
+Auto-migrated on first boot:
+
+| Table | Description |
+|-------|-------------|
+| `user_tokens` | Issued tokens with optional subject and expiry |
+| `token_scopes` | Token → scope assignments |
+| `scopes` | Global scope registry (name, category, description) |
+| `user_scopes` | Per-user scope assignments |
+
+System tables managed by `dashboard-kit` core (never prefixed):
+
+| Table | Description |
+|-------|-------------|
+| `_schema_state` | Schema hash per table — drives the schema sync fast path |
+| `_table_version` | Per-table write counters — drives SELECT cache invalidation |
+| `_query_cache` | Cached SELECT results with TTL |
+
+## License
+
+Business Source License 1.1 — see [LICENSE](LICENSE).
+For alternative licensing, [contact us](https://masiarek.pl/contact/?af_subject=Commercial+license+%E2%80%94+dashboard-kit-addon-api&af_message=Hello%2C+I+am+interested+in+a+commercial+license+for+dashboard-kit-addon-api.).

@@ -1,0 +1,22 @@
+{
+    "name": "rafalmasiarek/dashboard-kit-addon-api",
+    "description": "API plugin for dashboard-kit: token auth with scopes, versioned module routes, OpenAPI registry.",
+    "type": "library",
+    "license": "BUSL-1.1",
+    "require": {
+        "php": ">=8.2",
+        "rafalmasiarek/dashboard-kit": "*",
+        "slim/slim": "^4.0",
+        "slim/psr7": "^1.0"
+    },
+    "suggest": {
+        "rafalmasiarek/dashboard-kit-addon-scheduler": "Exposes /v1/cron endpoints with scope-based auth when installed alongside."
+    },
+    "autoload": {
+        "psr-4": {
+            "rafalmasiarek\\DashboardKitApi\\": "src/"
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}

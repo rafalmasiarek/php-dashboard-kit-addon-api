@@ -1,0 +1,49 @@
+{% extends "admin-layout.twig" %}
+
+{% block admin_content %}
+<div class="card shadow-sm">
+    <div class="card-header">
+        <h5 class="mb-0">Assign API Scopes</h5>
+    </div>
+    <div class="card-body">
+        {% if all_scopes is empty %}
+        <p class="text-muted mb-0">No scopes defined yet. <a href="{{ admin_panel }}/api/scopes">Create some</a> first.</p>
+        {% else %}
+        <form method="post" action="{{ admin_panel }}/api/users/{{ target_user.id }}/scopes">
+            {{ csrf_field('user-api-scopes-save') }}
+
+            <div class="row g-3 mb-4">
+                {% for category, cat_scopes in all_scopes %}
+                <div class="col-sm-6 col-md-4">
+                    <div class="card border">
+                        <div class="card-header py-1 px-2 bg-light">
+                            <strong class="small text-uppercase">{{ category }}</strong>
+                        </div>
+                        <div class="card-body py-2 px-2">
+                            {% for scope in cat_scopes %}
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox"
+                                       name="scope_ids[]" value="{{ scope.id }}"
+                                       id="scope_{{ scope.id }}"
+                                       {% if scope.id in assigned_ids %}checked{% endif %}>
+                                <label class="form-check-label small" for="scope_{{ scope.id }}">
+                                    <code>{{ scope.action }}</code>
+                                    {% if scope.description %}
+                                    <span class="text-muted"> — {{ scope.description }}</span>
+                                    {% endif %}
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <button type="submit" class="btn btn-primary">Save Scope Assignments</button>
+            <a href="{{ admin_panel }}/users" class="btn btn-outline-secondary ms-2">Cancel</a>
+        </form>
+        {% endif %}
+    </div>
+</div>
+{% endblock admin_content %}

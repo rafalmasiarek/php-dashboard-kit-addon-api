@@ -1,0 +1,84 @@
+{% extends "admin-layout.twig" %}
+
+{% block admin_content %}
+<div class="card mb-4 shadow-sm">
+    <div class="card-header">
+        <h5 class="mb-0">Scope List</h5>
+    </div>
+    <div class="card-body p-0">
+        {% if scopes_grouped is empty %}
+        <p class="text-muted p-3 mb-0">No scopes defined yet.</p>
+        {% else %}
+        <div class="table-responsive">
+            <table class="table table-hover table-striped mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Category</th>
+                        <th>Action</th>
+                        <th>Description</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for category, scopes in scopes_grouped %}
+                    {% for scope in scopes %}
+                    <tr>
+                        <td class="text-muted small align-middle">{{ scope.id }}</td>
+                        <td class="align-middle"><code>{{ scope.name }}</code></td>
+                        <td class="align-middle">
+                            <span class="badge bg-secondary">{{ scope.category }}</span>
+                        </td>
+                        <td class="align-middle">{{ scope.action }}</td>
+                        <td class="align-middle text-muted small">{{ scope.description ?? '—' }}</td>
+                        <td class="align-middle text-end">
+                            <form method="post" action="{{ admin_panel }}/api/scopes/{{ scope.id }}/delete"
+                                  onsubmit="return confirm('Delete scope {{ scope.name }}?')">
+                                {{ csrf_field('api-scopes-delete') }}
+                                <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-header">
+        <h5 class="mb-0">Create Scope</h5>
+    </div>
+    <div class="card-body">
+        <form method="post" action="{{ admin_panel }}/api/scopes">
+            {{ csrf_field('api-scopes-create') }}
+            <div class="row g-3">
+                <div class="col-sm-4">
+                    <label for="category" class="form-label">Category</label>
+                    <input type="text" class="form-control" id="category" name="category"
+                           placeholder="notes" required>
+                    <div class="form-text">The part before the colon, e.g. <code>notes</code>.</div>
+                </div>
+                <div class="col-sm-4">
+                    <label for="action" class="form-label">Action</label>
+                    <input type="text" class="form-control" id="action" name="action"
+                           placeholder="read" required>
+                    <div class="form-text">The part after the colon, e.g. <code>read</code>.</div>
+                </div>
+                <div class="col-sm-4">
+                    <label for="description" class="form-label">Description <span class="text-muted">(optional)</span></label>
+                    <input type="text" class="form-control" id="description" name="description"
+                           placeholder="Allows reading notes">
+                </div>
+            </div>
+            <div class="mt-3">
+                <button type="submit" class="btn btn-primary">Create Scope</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock admin_content %}

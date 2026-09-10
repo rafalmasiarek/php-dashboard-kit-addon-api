@@ -1,0 +1,146 @@
+{% extends "settings-layout.twig" %}
+
+{% block settings_content %}
+<div class="card mb-4 shadow-sm">
+    <div class="card-header">
+        <h5 class="mb-0">My Tokens</h5>
+    </div>
+    <div class="card-body p-0">
+        {% if tokens is empty %}
+        <p class="text-muted p-3 mb-0">No tokens issued yet.</p>
+        {% else %}
+        <div class="table-responsive">
+            <table class="table table-hover table-striped mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Token</th>
+                        <th>Subject</th>
+                        <th>Scopes</th>
+                        <th>Expires</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in tokens %}
+                    <tr>
+                        <td class="align-middle" style="max-width:240px">
+                            <code class="d-block small text-break">{{ item.token }}</code>
+                            <button type="button"
+                                    class="btn btn-outline-secondary btn-sm mt-1 py-0 px-2"
+                                    data-token="{{ item.token }}"
+                                    onclick="copyToken(this)">Copy</button>
+                        </td>
+                        <td class="align-middle text-muted small">{{ item.subject ?? '—' }}</td>
+                        <td class="align-middle">
+                            {% if item.scopes is empty %}
+                            <span class="text-muted">—</span>
+                            {% else %}
+                            {% for scope in item.scopes %}
+                            <span class="badge bg-primary me-1">{{ scope }}</span>
+                            {% endfor %}
+                            {% endif %}
+                        </td>
+                        <td class="align-middle small text-muted">{{ item.exp_h }}</td>
+                        <td class="align-middle text-end">
+                            <form method="post" action="{{ base }}/settings/api-tokens/{{ item.token }}/revoke"
+                                  onsubmit="return confirm('Revoke this token?')">
+                                {{ csrf_field('api-tokens-revoke') }}
+                                <button type="submit" class="btn btn-sm btn-outline-danger">Revoke</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-header">
+        <h5 class="mb-0">Create Token</h5>
+    </div>
+    <div class="card-body">
+        <form method="post" action="{{ base }}/settings/api-tokens">
+            {{ csrf_field('api-tokens-create') }}
+            <div class="row g-3 mb-3">
+                <div class="col-sm-6">
+                    <label for="subject" class="form-label">Subject <span class="text-muted">(optional)</span></label>
+                    <input type="text" class="form-control" id="subject" name="subject"
+                           placeholder="e.g. deploy-bot">
+                    <div class="form-text">A human-readable label for this token.</div>
+                </div>
+                <div class="col-sm-6">
+                    <label for="ttl_minutes" class="form-label">Expires</label>
+                    <select class="form-select" id="ttl_minutes" name="ttl_minutes">
+                        <option value="0">Never</option>
+                        <option value="60">1 hour</option>
+                        <option value="1440">24 hours</option>
+                        <option value="10080">7 days</option>
+                        <option value="43200">30 days</option>
+                        <option value="525600">365 days</option>
+                    </select>
+                </div>
+            </div>
+
+            {% if scope_options is not empty %}
+            <div class="mb-3">
+                <label class="form-label">Scopes</label>
+                {% set grouped = {} %}
+                {% for scope in scope_options %}
+                    {% set cat = scope.category %}
+                    {% if grouped[cat] is not defined %}
+                        {% set grouped = grouped|merge({(cat): []}) %}
+                    {% endif %}
+                    {% set grouped = grouped|merge({(cat): grouped[cat]|merge([scope])}) %}
+                {% endfor %}
+
+                <div class="row g-2">
+                    {% for cat, cat_scopes in grouped %}
+                    <div class="col-sm-6 col-md-4">
+                        <div class="card border">
+                            <div class="card-header py-1 px-2 bg-light">
+                                <strong class="small text-uppercase">{{ cat }}</strong>
+                            </div>
+                            <div class="card-body py-2 px-2">
+                                {% for scope in cat_scopes %}
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox"
+                                           name="scopes[]" value="{{ scope.name }}"
+                                           id="scope_{{ scope.id }}">
+                                    <label class="form-check-label small" for="scope_{{ scope.id }}">
+                                        <code>{{ scope.action }}</code>
+                                        {% if scope.description %}
+                                        <span class="text-muted"> — {{ scope.description }}</span>
+                                        {% endif %}
+                                    </label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% else %}
+            <p class="text-muted small">No scopes have been assigned to your account yet. Contact an administrator.</p>
+            {% endif %}
+
+            <button type="submit" class="btn btn-primary">Create Token</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function copyToken(btn) {
+    navigator.clipboard.writeText(btn.dataset.token).then(function () {
+        var orig = btn.textContent;
+        btn.textContent = 'Copied!';
+        setTimeout(function () { btn.textContent = orig; }, 1500);
+    });
+}
+</script>
+{% endblock %}
