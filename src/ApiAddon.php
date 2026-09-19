@@ -598,6 +598,7 @@ final class ApiAddon
                         'responses'  => (array) ($def['responses'] ?? []),
                         'is_public'  => isset($def['auth']) && $def['auth'] === false,
                         'driver'     => $def['driver'] ?? null,
+                        'hidden'     => (bool) ($def['hidden'] ?? false),
                     ];
                 }
             }
@@ -726,6 +727,10 @@ final class ApiAddon
             }
 
             foreach ($entries as $entry) {
+                if ($entry['hidden']) {
+                    continue;
+                }
+
                 [$method, $path] = \explode(' ', $entry['endpoint'], 2);
                 $openapi = $entry['openapi'];
 
