@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.0](https://github.com/rafalmasiarek/php-dashboard-kit-addon-api/compare/v1.0.1...v1.1.0) (2026-09-19)
+
+
+### Features
+
+* **api:** support hidden routes (registered but excluded from OpenAPI) ([7b25991](https://github.com/rafalmasiarek/php-dashboard-kit-addon-api/commit/7b25991d728991f4ec1a3deef324384c19a3b44d))
+* support hidden routes excluded from OpenAPI ([aa0db1f](https://github.com/rafalmasiarek/php-dashboard-kit-addon-api/commit/aa0db1ff0d51b7f39c888f6a8b0f2074123c59ac))
+
 ## [1.0.1](https://github.com/rafalmasiarek/php-dashboard-kit-addon-api/compare/v1.0.0...v1.0.1) (2026-09-13)
 
 
