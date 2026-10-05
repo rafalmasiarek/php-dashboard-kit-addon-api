@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/rafalmasiarek/php-dashboard-kit-addon-api/compare/v1.1.0...v1.2.0) (2026-10-05)
+
+
+### Features
+
+* **model:** migrate to dashboard-kit's Model CRUD (requires ^4.3) ([#7](https://github.com/rafalmasiarek/php-dashboard-kit-addon-api/issues/7)) ([ca8b88e](https://github.com/rafalmasiarek/php-dashboard-kit-addon-api/commit/ca8b88e129b14bad94d083fe0bce998a97e5941f))
+
 ## [1.1.0](https://github.com/rafalmasiarek/php-dashboard-kit-addon-api/compare/v1.0.1...v1.1.0) (2026-09-19)
 
 
