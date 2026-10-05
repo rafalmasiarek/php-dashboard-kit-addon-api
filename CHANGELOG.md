@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.1](https://github.com/rafalmasiarek/php-dashboard-kit-addon-api/compare/v1.2.0...v1.2.1) (2026-10-05)
+
+
+### Bug Fixes
+
+* **deps:** allow dashboard-kit ^5.0 ([#9](https://github.com/rafalmasiarek/php-dashboard-kit-addon-api/issues/9)) ([eec19d1](https://github.com/rafalmasiarek/php-dashboard-kit-addon-api/commit/eec19d1d4a882ba492c6475611b96d54653a0b9d))
+
 ## [1.2.0](https://github.com/rafalmasiarek/php-dashboard-kit-addon-api/compare/v1.1.0...v1.2.0) (2026-10-05)
 
 
