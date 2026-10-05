@@ -92,14 +92,14 @@ final class ApiAddon
         $schema = new ApiSchemaProvider();
         $schema->createSchema($pdo);
 
-        $container->set(DbTokenValidator::class, static fn() => new DbTokenValidator($pdo));
+        $container->set(DbTokenValidator::class, static fn() => new DbTokenValidator());
         $container->set(TokenValidatorInterface::class, static fn() => $container->get(DbTokenValidator::class));
 
-        $container->set(DbTokenRepository::class, static fn() => new DbTokenRepository($pdo));
+        $container->set(DbTokenRepository::class, static fn() => new DbTokenRepository());
         $container->set(TokenRepositoryInterface::class, static fn() => $container->get(DbTokenRepository::class));
 
-        $container->set(ApiScopeRepository::class,  static fn() => new ApiScopeRepository($pdo));
-        $container->set(UserScopeRepository::class, static fn() => new UserScopeRepository($pdo));
+        $container->set(ApiScopeRepository::class,  static fn() => new ApiScopeRepository());
+        $container->set(UserScopeRepository::class, static fn() => new UserScopeRepository());
 
         $container->set(ApiTokenAuditLog::class, static function () use ($container): ApiTokenAuditLog {
             try {
