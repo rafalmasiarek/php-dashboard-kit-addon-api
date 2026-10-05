@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace rafalmasiarek\DashboardKitApi\Auth;
 
-use PDO;
+use rafalmasiarek\DashboardKit\Model\Model;
 
 /**
  * Persists API tokens in the database.
@@ -18,11 +18,6 @@ use PDO;
  */
 final class DbTokenRepository implements TokenRepositoryInterface
 {
-    /**
-     * @var PDO
-     */
-    private PDO $pdo;
-
     /**
      * @var string
      */
@@ -44,20 +39,17 @@ final class DbTokenRepository implements TokenRepositoryInterface
     private string $tblTokenScopes;
 
     /**
-     * @param PDO    $pdo
      * @param string $tblUsers       Users table (default: 'users').
      * @param string $tblTokens      API tokens table (default: 'user_tokens').
      * @param string $tblScopes      Scopes dictionary (default: 'scopes').
      * @param string $tblTokenScopes Token-scopes junction (default: 'token_scopes').
      */
     public function __construct(
-        PDO $pdo,
         string $tblUsers = 'users',
         string $tblTokens = 'user_tokens',
         string $tblScopes = 'scopes',
         string $tblTokenScopes = 'token_scopes'
     ) {
-        $this->pdo            = $pdo;
         $this->tblUsers       = $tblUsers;
         $this->tblTokens      = $tblTokens;
         $this->tblScopes      = $tblScopes;
@@ -71,30 +63,20 @@ final class DbTokenRepository implements TokenRepositoryInterface
      */
     public function all(): array
     {
-        $sql = \sprintf(
-            'SELECT t.token, t.user_id, t.subject, t.expires_at, u.email
-             FROM %s t
-             JOIN %s u ON u.id = t.user_id
-             ORDER BY t.token ASC',
-            $this->qi($this->tblTokens),
-            $this->qi($this->tblUsers)
-        );
+        $rows = Model::on($this->tblTokens)
+            ->select(
+                "{$this->tblTokens}.token",
+                "{$this->tblTokens}.user_id",
+                "{$this->tblTokens}.subject",
+                "{$this->tblTokens}.expires_at",
+                "{$this->tblUsers}.email",
+            )
+            ->join($this->tblUsers, "{$this->tblUsers}.id", '=', "{$this->tblTokens}.user_id")
+            ->orderBy('token')
+            ->get()
+            ->toArray();
 
-        $rows = $this->pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC) ?: [];
-        $out  = [];
-
-        foreach ($rows as $r) {
-            $token        = (string) $r['token'];
-            $out[$token]  = [
-                'user_id' => (string) $r['user_id'],
-                'sub'     => (string) $r['email'],
-                'subject' => isset($r['subject']) ? (string) $r['subject'] : null,
-                'exp'     => $this->toUnix((string) ($r['expires_at'] ?? '')),
-                'scopes'  => $this->getTokenScopesByNames($token),
-            ];
-        }
-
-        return $out;
+        return $this->mapByToken($rows);
     }
 
     /**
@@ -105,33 +87,21 @@ final class DbTokenRepository implements TokenRepositoryInterface
      */
     public function allByUser(string $userId): array
     {
-        $sql = \sprintf(
-            'SELECT t.token, t.user_id, t.subject, t.expires_at, u.email
-             FROM %s t
-             JOIN %s u ON u.id = t.user_id
-             WHERE t.user_id = :uid
-             ORDER BY t.token ASC',
-            $this->qi($this->tblTokens),
-            $this->qi($this->tblUsers)
-        );
+        $rows = Model::on($this->tblTokens)
+            ->select(
+                "{$this->tblTokens}.token",
+                "{$this->tblTokens}.user_id",
+                "{$this->tblTokens}.subject",
+                "{$this->tblTokens}.expires_at",
+                "{$this->tblUsers}.email",
+            )
+            ->join($this->tblUsers, "{$this->tblUsers}.id", '=', "{$this->tblTokens}.user_id")
+            ->where('user_id', $userId)
+            ->orderBy('token')
+            ->get()
+            ->toArray();
 
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([':uid' => $userId]);
-        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
-        $out  = [];
-
-        foreach ($rows as $r) {
-            $token        = (string) $r['token'];
-            $out[$token]  = [
-                'user_id' => (string) $r['user_id'],
-                'sub'     => (string) $r['email'],
-                'subject' => isset($r['subject']) ? (string) $r['subject'] : null,
-                'exp'     => $this->toUnix((string) ($r['expires_at'] ?? '')),
-                'scopes'  => $this->getTokenScopesByNames($token),
-            ];
-        }
-
-        return $out;
+        return $this->mapByToken($rows);
     }
 
     /**
@@ -139,31 +109,19 @@ final class DbTokenRepository implements TokenRepositoryInterface
      */
     public function get(string $token): ?array
     {
-        $sql = \sprintf(
-            'SELECT t.token, t.user_id, t.subject, t.expires_at, u.email
-             FROM %s t
-             JOIN %s u ON u.id = t.user_id
-             WHERE t.token = :token
-             LIMIT 1',
-            $this->qi($this->tblTokens),
-            $this->qi($this->tblUsers)
-        );
+        $row = Model::on($this->tblTokens)
+            ->select(
+                "{$this->tblTokens}.token",
+                "{$this->tblTokens}.user_id",
+                "{$this->tblTokens}.subject",
+                "{$this->tblTokens}.expires_at",
+                "{$this->tblUsers}.email",
+            )
+            ->join($this->tblUsers, "{$this->tblUsers}.id", '=', "{$this->tblTokens}.user_id")
+            ->where('token', $token)
+            ->first();
 
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([':token' => $token]);
-        $r = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
-
-        if ($r === null) {
-            return null;
-        }
-
-        return [
-            'user_id' => (string) $r['user_id'],
-            'sub'     => (string) $r['email'],
-            'subject' => isset($r['subject']) ? (string) $r['subject'] : null,
-            'exp'     => $this->toUnix((string) ($r['expires_at'] ?? '')),
-            'scopes'  => $this->getTokenScopesByNames($token),
-        ];
+        return $row !== null ? $this->toClaims($row) : null;
     }
 
     /**
@@ -188,23 +146,10 @@ final class DbTokenRepository implements TokenRepositoryInterface
             $subject = $claims['subject'];
         }
 
-        $sql = \sprintf(
-            'INSERT INTO %s (token, user_id, subject, expires_at)
-             VALUES (:token, :uid, :subject, :exp)
-             ON DUPLICATE KEY UPDATE
-               user_id    = VALUES(user_id),
-               subject    = VALUES(subject),
-               expires_at = VALUES(expires_at)',
-            $this->qi($this->tblTokens)
+        Model::on($this->tblTokens)->upsert(
+            ['token' => $token, 'user_id' => $userId, 'subject' => $subject, 'expires_at' => $exp],
+            ['token'],
         );
-
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([
-            ':token'   => $token,
-            ':uid'     => $userId,
-            ':subject' => $subject,
-            ':exp'     => $exp,
-        ]);
     }
 
     /**
@@ -212,10 +157,7 @@ final class DbTokenRepository implements TokenRepositoryInterface
      */
     public function delete(string $token): bool
     {
-        $sql  = \sprintf('DELETE FROM %s WHERE token = :token', $this->qi($this->tblTokens));
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([':token' => $token]);
-        return $stmt->rowCount() > 0;
+        return Model::on($this->tblTokens)->where('token', $token)->forceDelete() > 0;
     }
 
     /**
@@ -229,35 +171,17 @@ final class DbTokenRepository implements TokenRepositoryInterface
     {
         $names = \array_values(\array_unique(\array_filter(\array_map('strval', $names))));
 
-        $ids = [];
-        if ($names !== []) {
-            $in  = \implode(',', \array_fill(0, \count($names), '?'));
-            $sql = \sprintf('SELECT id FROM %s WHERE name IN (%s)', $this->qi($this->tblScopes), $in);
-            $st  = $this->pdo->prepare($sql);
-            $st->execute($names);
-            $ids = \array_map('intval', $st->fetchAll(PDO::FETCH_COLUMN, 0) ?: []);
-        }
+        $ids = $names !== []
+            ? Model::on($this->tblScopes)->select('id')->whereIn('name', $names)->get()->pluck('id')
+            : [];
 
-        $this->pdo->beginTransaction();
-        try {
-            $this->pdo->prepare(
-                \sprintf('DELETE FROM %s WHERE token = :token', $this->qi($this->tblTokenScopes))
-            )->execute([':token' => $token]);
+        Model::transaction(function () use ($token, $ids): void {
+            Model::on($this->tblTokenScopes)->where('token', $token)->forceDelete();
 
-            if ($ids !== []) {
-                $ins = $this->pdo->prepare(
-                    \sprintf('INSERT INTO %s (token, scope_id) VALUES (:token, :sid)', $this->qi($this->tblTokenScopes))
-                );
-                foreach ($ids as $sid) {
-                    $ins->execute([':token' => $token, ':sid' => $sid]);
-                }
+            foreach ($ids as $scopeId) {
+                Model::on($this->tblTokenScopes)->insert(['token' => $token, 'scope_id' => (int) $scopeId]);
             }
-
-            $this->pdo->commit();
-        } catch (\Throwable $e) {
-            $this->pdo->rollBack();
-            throw $e;
-        }
+        });
     }
 
     /**
@@ -268,21 +192,47 @@ final class DbTokenRepository implements TokenRepositoryInterface
      */
     public function getTokenScopesByNames(string $token): array
     {
-        $sql = \sprintf(
-            'SELECT s.name
-             FROM %s ts
-             JOIN %s s ON s.id = ts.scope_id
-             WHERE ts.token = :token
-             ORDER BY s.name',
-            $this->qi($this->tblTokenScopes),
-            $this->qi($this->tblScopes)
-        );
+        $names = Model::on($this->tblTokenScopes)
+            ->select("{$this->tblScopes}.name")
+            ->join($this->tblScopes, "{$this->tblScopes}.id", '=', "{$this->tblTokenScopes}.scope_id")
+            ->where('token', $token)
+            ->orderBy('name')
+            ->get()
+            ->pluck('name');
 
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([':token' => $token]);
-        $rows = $stmt->fetchAll(PDO::FETCH_COLUMN, 0) ?: [];
+        return \array_values(\array_map('strval', $names));
+    }
 
-        return \array_values(\array_map('strval', $rows));
+    /**
+     * Converts a list of joined token+email rows into a token => claims map.
+     *
+     * @param  list<array<string,mixed>> $rows
+     * @return array<string,array<string,mixed>>
+     */
+    private function mapByToken(array $rows): array
+    {
+        $out = [];
+        foreach ($rows as $row) {
+            $out[(string) $row['token']] = $this->toClaims($row);
+        }
+        return $out;
+    }
+
+    /**
+     * Converts one joined token+email row into the claims shape.
+     *
+     * @param  array<string,mixed> $row
+     * @return array<string,mixed>
+     */
+    private function toClaims(array $row): array
+    {
+        return [
+            'user_id' => (string) $row['user_id'],
+            'sub'     => (string) $row['email'],
+            'subject' => isset($row['subject']) ? (string) $row['subject'] : null,
+            'exp'     => $this->toUnix((string) ($row['expires_at'] ?? '')),
+            'scopes'  => $this->getTokenScopesByNames((string) $row['token']),
+        ];
     }
 
     /**
@@ -299,16 +249,5 @@ final class DbTokenRepository implements TokenRepositoryInterface
         }
         $ts = \strtotime($datetime);
         return $ts === false ? null : $ts;
-    }
-
-    /**
-     * Backtick-quote an identifier (trusted table names only).
-     *
-     * @param string $ident
-     * @return string
-     */
-    private function qi(string $ident): string
-    {
-        return '`' . \str_replace('`', '``', $ident) . '`';
     }
 }

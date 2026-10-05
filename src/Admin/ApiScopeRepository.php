@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace rafalmasiarek\DashboardKitApi\Admin;
 
-use PDO;
+use rafalmasiarek\DashboardKit\Model\Model;
 
 /**
  * Read/write access to the API scope dictionary table.
@@ -18,13 +18,6 @@ use PDO;
 final class ApiScopeRepository
 {
     /**
-     * PDO connection.
-     *
-     * @var PDO
-     */
-    private PDO $pdo;
-
-    /**
      * Scopes table name.
      *
      * @var string
@@ -32,12 +25,10 @@ final class ApiScopeRepository
     private string $tblScopes;
 
     /**
-     * @param PDO    $pdo       Active database connection.
      * @param string $tblScopes Scopes table name. Default: 'scopes'.
      */
-    public function __construct(PDO $pdo, string $tblScopes = 'scopes')
+    public function __construct(string $tblScopes = 'scopes')
     {
-        $this->pdo       = $pdo;
         $this->tblScopes = $tblScopes;
     }
 
@@ -55,8 +46,11 @@ final class ApiScopeRepository
      */
     public function all(): array
     {
-        $sql  = \sprintf('SELECT id, name, description FROM %s ORDER BY name ASC', $this->qi($this->tblScopes));
-        $rows = $this->pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        $rows = Model::on($this->tblScopes)
+            ->select('id', 'name', 'description')
+            ->orderBy('name')
+            ->get()
+            ->toArray();
 
         return \array_map([$this, 'enrichRow'], $rows);
     }
@@ -87,22 +81,7 @@ final class ApiScopeRepository
      */
     public function create(string $name, ?string $description = null): void
     {
-        $driver = $this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
-
-        if ($driver === 'mysql') {
-            $sql = \sprintf(
-                'INSERT IGNORE INTO %s (name, description) VALUES (:name, :description)',
-                $this->qi($this->tblScopes)
-            );
-        } else {
-            $sql = \sprintf(
-                'INSERT OR IGNORE INTO %s (name, description) VALUES (:name, :description)',
-                $this->qi($this->tblScopes)
-            );
-        }
-
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([':name' => $name, ':description' => $description]);
+        Model::on($this->tblScopes)->insertOrIgnore(['name' => $name, 'description' => $description]);
     }
 
     /**
@@ -113,10 +92,7 @@ final class ApiScopeRepository
      */
     public function deleteById(int $id): bool
     {
-        $sql  = \sprintf('DELETE FROM %s WHERE id = :id', $this->qi($this->tblScopes));
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([':id' => $id]);
-        return $stmt->rowCount() > 0;
+        return Model::on($this->tblScopes)->where('id', $id)->forceDelete() > 0;
     }
 
     /**
@@ -127,10 +103,7 @@ final class ApiScopeRepository
      */
     public function exists(string $name): bool
     {
-        $sql  = \sprintf('SELECT COUNT(*) FROM %s WHERE name = :name', $this->qi($this->tblScopes));
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([':name' => $name]);
-        return (int) $stmt->fetchColumn() > 0;
+        return Model::on($this->tblScopes)->where('name', $name)->count() > 0;
     }
 
     /**
@@ -140,9 +113,8 @@ final class ApiScopeRepository
      */
     public function allNames(): array
     {
-        $sql  = \sprintf('SELECT name FROM %s ORDER BY name ASC', $this->qi($this->tblScopes));
-        $rows = $this->pdo->query($sql)->fetchAll(PDO::FETCH_COLUMN, 0) ?: [];
-        return \array_values(\array_map('strval', $rows));
+        $names = Model::on($this->tblScopes)->select('name')->orderBy('name')->get()->pluck('name');
+        return \array_values(\array_map('strval', $names));
     }
 
     /**
@@ -168,16 +140,5 @@ final class ApiScopeRepository
             'category'    => $category,
             'action'      => $action,
         ];
-    }
-
-    /**
-     * Backtick-quote an SQL identifier (trusted table names only).
-     *
-     * @param string $ident Identifier to quote.
-     * @return string
-     */
-    private function qi(string $ident): string
-    {
-        return '`' . \str_replace('`', '``', $ident) . '`';
     }
 }

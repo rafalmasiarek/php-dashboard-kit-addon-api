@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace rafalmasiarek\DashboardKitApi\Auth;
 
-use PDO;
+use rafalmasiarek\DashboardKit\Model\Model;
 
 /**
  * Validates bearer tokens against the database.
@@ -28,11 +28,6 @@ use PDO;
 final class DbTokenValidator implements TokenValidatorInterface
 {
     /**
-     * @var PDO
-     */
-    private PDO $pdo;
-
-    /**
      * @var string
      */
     private string $tblUsers;
@@ -53,20 +48,17 @@ final class DbTokenValidator implements TokenValidatorInterface
     private string $tblScopes;
 
     /**
-     * @param PDO    $pdo
      * @param string $tblUsers       Users table (default: 'users').
      * @param string $tblTokens      API tokens table (default: 'user_tokens').
      * @param string $tblTokenScopes Token-scopes junction table (default: 'token_scopes').
      * @param string $tblScopes      Scopes dictionary table (default: 'scopes').
      */
     public function __construct(
-        PDO $pdo,
         string $tblUsers = 'users',
         string $tblTokens = 'user_tokens',
         string $tblTokenScopes = 'token_scopes',
         string $tblScopes = 'scopes'
     ) {
-        $this->pdo            = $pdo;
         $this->tblUsers       = $tblUsers;
         $this->tblTokens      = $tblTokens;
         $this->tblTokenScopes = $tblTokenScopes;
@@ -100,19 +92,11 @@ final class DbTokenValidator implements TokenValidatorInterface
      */
     private function fetchClaims(string $token): ?array
     {
-        $sql = \sprintf(
-            'SELECT t.user_id, t.expires_at, u.email
-             FROM %s t
-             JOIN %s u ON u.id = t.user_id
-             WHERE t.token = :token
-             LIMIT 1',
-            $this->qi($this->tblTokens),
-            $this->qi($this->tblUsers)
-        );
-
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([':token' => $token]);
-        $row = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+        $row = Model::on($this->tblTokens)
+            ->select("{$this->tblTokens}.user_id", "{$this->tblTokens}.expires_at", "{$this->tblUsers}.email")
+            ->join($this->tblUsers, "{$this->tblUsers}.id", '=', "{$this->tblTokens}.user_id")
+            ->where('token', $token)
+            ->first();
 
         if ($row === null) {
             return null;
@@ -144,31 +128,14 @@ final class DbTokenValidator implements TokenValidatorInterface
      */
     private function fetchScopes(string $token): array
     {
-        $sql = \sprintf(
-            'SELECT s.name
-             FROM %s ts
-             JOIN %s s ON s.id = ts.scope_id
-             WHERE ts.token = :token
-             ORDER BY s.name',
-            $this->qi($this->tblTokenScopes),
-            $this->qi($this->tblScopes)
-        );
+        $names = Model::on($this->tblTokenScopes)
+            ->select("{$this->tblScopes}.name")
+            ->join($this->tblScopes, "{$this->tblScopes}.id", '=', "{$this->tblTokenScopes}.scope_id")
+            ->where('token', $token)
+            ->orderBy('name')
+            ->get()
+            ->pluck('name');
 
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([':token' => $token]);
-        $rows = $stmt->fetchAll(PDO::FETCH_COLUMN, 0) ?: [];
-
-        return \array_values(\array_map('strval', $rows));
-    }
-
-    /**
-     * Backtick-quote an identifier (trusted table names only).
-     *
-     * @param string $ident
-     * @return string
-     */
-    private function qi(string $ident): string
-    {
-        return '`' . \str_replace('`', '``', $ident) . '`';
+        return \array_values(\array_map('strval', $names));
     }
 }

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace rafalmasiarek\DashboardKitApi\Admin;
 
-use PDO;
+use rafalmasiarek\DashboardKit\Model\Model;
 
 /**
  * Manages the many-to-many assignment of API scopes to users.
@@ -18,21 +18,6 @@ use PDO;
 final class UserScopeRepository
 {
     /**
-     * PDO connection.
-     *
-     * @var PDO
-     */
-    private PDO $pdo;
-
-    /**
-     * @param PDO $pdo Active database connection.
-     */
-    public function __construct(PDO $pdo)
-    {
-        $this->pdo = $pdo;
-    }
-
-    /**
      * Return all scope IDs assigned to a user.
      *
      * @param  string  $userId User UUID.
@@ -40,9 +25,8 @@ final class UserScopeRepository
      */
     public function scopeIdsForUser(string $userId): array
     {
-        $stmt = $this->pdo->prepare('SELECT scope_id FROM user_scopes WHERE user_id = :uid');
-        $stmt->execute([':uid' => $userId]);
-        return \array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN, 0) ?: []);
+        $ids = Model::on('user_scopes')->select('scope_id')->where('user_id', $userId)->get()->pluck('scope_id');
+        return \array_map('intval', $ids);
     }
 
     /**
@@ -53,16 +37,13 @@ final class UserScopeRepository
      */
     public function scopesForUser(string $userId): array
     {
-        $sql = '
-            SELECT s.id, s.name, s.description
-            FROM user_scopes us
-            JOIN scopes s ON s.id = us.scope_id
-            WHERE us.user_id = :uid
-            ORDER BY s.name ASC
-        ';
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([':uid' => $userId]);
-        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        $rows = Model::on('user_scopes')
+            ->select('scopes.id', 'scopes.name', 'scopes.description')
+            ->join('scopes', 'scopes.id', '=', 'user_scopes.scope_id')
+            ->where('user_id', $userId)
+            ->orderBy('name')
+            ->get()
+            ->toArray();
 
         return \array_map([$this, 'enrichRow'], $rows);
     }
@@ -78,23 +59,13 @@ final class UserScopeRepository
      */
     public function setForUser(string $userId, array $scopeIds): void
     {
-        $this->pdo->beginTransaction();
-        try {
-            $del = $this->pdo->prepare('DELETE FROM user_scopes WHERE user_id = :uid');
-            $del->execute([':uid' => $userId]);
+        Model::transaction(function () use ($userId, $scopeIds): void {
+            Model::on('user_scopes')->where('user_id', $userId)->forceDelete();
 
-            if ($scopeIds !== []) {
-                $ins = $this->pdo->prepare('INSERT INTO user_scopes (user_id, scope_id) VALUES (:uid, :sid)');
-                foreach (\array_unique($scopeIds) as $scopeId) {
-                    $ins->execute([':uid' => $userId, ':sid' => (int) $scopeId]);
-                }
+            foreach (\array_unique($scopeIds) as $scopeId) {
+                Model::on('user_scopes')->insert(['user_id' => $userId, 'scope_id' => (int) $scopeId]);
             }
-
-            $this->pdo->commit();
-        } catch (\Throwable $e) {
-            $this->pdo->rollBack();
-            throw $e;
-        }
+        });
     }
 
     /**
@@ -106,10 +77,11 @@ final class UserScopeRepository
      */
     public function userHasScopeByName(string $userId, string $scopeName): bool
     {
-        $sql  = 'SELECT COUNT(*) FROM user_scopes us JOIN scopes s ON s.id = us.scope_id WHERE us.user_id = :uid AND s.name = :name';
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([':uid' => $userId, ':name' => $scopeName]);
-        return (int) $stmt->fetchColumn() > 0;
+        return Model::on('user_scopes')
+            ->join('scopes', 'scopes.id', '=', 'user_scopes.scope_id')
+            ->where('user_id', $userId)
+            ->where('name', $scopeName)
+            ->count() > 0;
     }
 
     /**
