@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.2](https://github.com/rafalmasiarek/php-dashboard-kit-addon-api/compare/v1.2.1...v1.2.2) (2026-11-01)
+
+
+### Miscellaneous Chores
+
+* **deps:** accept any dashboard-kit &gt;=4.3, not just the current major ([#12](https://github.com/rafalmasiarek/php-dashboard-kit-addon-api/issues/12)) ([9846a10](https://github.com/rafalmasiarek/php-dashboard-kit-addon-api/commit/9846a101b8d75cadb521545a24f75b29322d6184))
+
 ## [1.2.1](https://github.com/rafalmasiarek/php-dashboard-kit-addon-api/compare/v1.2.0...v1.2.1) (2026-10-05)
 
 
