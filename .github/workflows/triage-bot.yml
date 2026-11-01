@@ -1,3 +1,4 @@
+# Added from shared-config: files/common/.github/workflows/triage-bot.yml
 name: Triage Bot
 
 on:
@@ -24,12 +25,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        # shared-config:block:start: checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        # shared-config:block:end: checkout
         with:
           fetch-depth: 0
 
       - name: Run triage action
-        uses: rafalmasiarek/gh-triage-bot@v1
+        # shared-config:block:start: triage-bot
+        uses: rafalmasiarek/gh-triage-bot@7af313905a9ba144be3d91662b5be7e1f28640ef # v1
+        # shared-config:block:end: triage-bot
         with:
           config-path: .github/triage-rules.yml
           dry-run: ${{ github.event.inputs.dry_run || 'false' }}
