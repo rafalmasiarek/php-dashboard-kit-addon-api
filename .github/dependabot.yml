@@ -1,17 +1,7 @@
-# Added from shared-config: files/common/.github/dependabot.yml.tpl
-
+# Added from shared-config: templates/.github/dependabot.yml.tpl
 version: 2
 updates:
-  - package-ecosystem: "github-actions"
-    directory: "/"
-    schedule:
-      interval: "monthly"
-    open-pull-requests-limit: 5
-    labels:
-        - "dependencies"
-        - "github-actions"
-    commit-message:
-      prefix: "chore(deps)"
+# Added from shared-config: files/php/.github/dependabot.yml.tpl
   - package-ecosystem: "composer"
     directory: "/"
     schedule:
