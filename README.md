@@ -8,17 +8,6 @@ API plugin for [rafalmasiarek/dashboard-kit](https://github.com/rafalmasiarek/ph
 
 
 
-## License
-![License: BUSL-1.1](https://img.shields.io/badge/license-BUSL--1.1-red)
-
-Business Source License 1.1.
-Source available; commercial use restricted until 2099-01-01.
-For alternative licensing, contact: https://masiarek.pl/contact/?af_subject=Commercial+license+%E2%80%94+dashboard-kit-addon-api&af_message=Hello%2C+I+am+interested+in+a+commercial+license+for+dashboard-kit-addon-api.
-See [LICENSE](LICENSE) for full details.
-## Authors
-
-- Rafał Masiarek | [website](https://masiarek.pl) | [github](https://github.com/rafalmasiarek)
-
 
 ## Requirements
 
@@ -3077,6 +3066,24 @@ Create tables for SQLite.
 </details>
 
 
+
+## License
+
+![License: BUSL-1.1](https://img.shields.io/badge/license-BUSL--1.1-red)
+
+Business Source License 1.1.
+
+Source available; commercial use restricted until 2099-01-01.
+
+
+For alternative licensing, contact: https://masiarek.pl/contact/?af_subject=Commercial+license+%E2%80%94+dashboard-kit-addon-api&af_message=Hello%2C+I+am+interested+in+a+commercial+license+for+dashboard-kit-addon-api.
+
+
+
+See [LICENSE](LICENSE) for full details.
+## Authors
+
+- Rafał Masiarek | [website](https://masiarek.pl) | [github](https://github.com/rafalmasiarek)
 
 
 <!-- references -->
