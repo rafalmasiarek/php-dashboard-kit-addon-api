@@ -1,10 +1,45 @@
 # dashboard-kit-addon-api
+
+
 [![Packagist Version](https://img.shields.io/packagist/v/rafalmasiarek/dashboard-kit-addon-api)](https://packagist.org/packages/rafalmasiarek/dashboard-kit-addon-api)
 [![Total Downloads](https://img.shields.io/packagist/dt/rafalmasiarek/dashboard-kit-addon-api)](https://packagist.org/packages/rafalmasiarek/dashboard-kit-addon-api)
 [![PHP](https://img.shields.io/packagist/php-v/rafalmasiarek/dashboard-kit-addon-api)](https://packagist.org/packages/rafalmasiarek/dashboard-kit-addon-api)
 [![License](https://img.shields.io/badge/license-BUSL--1.1-red)](https://github.com/rafalmasiarek/php-dashboard-kit-addon-api/blob/main/LICENSE)
 
+
+
+
+
+
+
 API plugin for [rafalmasiarek/dashboard-kit](https://github.com/rafalmasiarek/php-dashboard-kit). Adds Bearer token authentication with per-route scope enforcement, admin UI for token and scope management, user self-service token page, and a structured audit trail.
+
+
+
+
+
+
+
+## License
+
+![License: BUSL-1.1](https://img.shields.io/badge/license-BUSL--1.1-red)
+
+Business Source License 1.1.
+
+Source available; commercial use restricted until 2099-01-01.
+
+
+
+
+See [LICENSE](LICENSE) for full details.
+
+For alternative licensing, [contact us](https://masiarek.pl/contact/?af_subject=Commercial+license+%E2%80%94+dashboard-kit-addon-api&af_message=Hello%2C+I+am+interested+in+a+commercial+license+for+dashboard-kit-addon-api.).
+
+
+
+## Authors
+
+- Rafał Masiarek | [website](https://masiarek.pl) | [github](https://github.com/rafalmasiarek)
 
 
 
@@ -3066,24 +3101,6 @@ Create tables for SQLite.
 </details>
 
 
-
-## License
-
-![License: BUSL-1.1](https://img.shields.io/badge/license-BUSL--1.1-red)
-
-Business Source License 1.1.
-
-Source available; commercial use restricted until 2099-01-01.
-
-
-For alternative licensing, contact: https://masiarek.pl/contact/?af_subject=Commercial+license+%E2%80%94+dashboard-kit-addon-api&af_message=Hello%2C+I+am+interested+in+a+commercial+license+for+dashboard-kit-addon-api.
-
-
-
-See [LICENSE](LICENSE) for full details.
-## Authors
-
-- Rafał Masiarek | [website](https://masiarek.pl) | [github](https://github.com/rafalmasiarek)
 
 
 <!-- references -->
