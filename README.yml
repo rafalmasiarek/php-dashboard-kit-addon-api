@@ -23,7 +23,7 @@ context:
   - |
     API plugin for [rafalmasiarek/dashboard-kit](https://github.com/rafalmasiarek/php-dashboard-kit). Adds Bearer token authentication with per-route scope enforcement, admin UI for token and scope management, user self-service token page, and a structured audit trail.
 
-includes:
+footer_includes:
   - docs/usage.md
   - docs/routing.md
   - docs/reference.md
