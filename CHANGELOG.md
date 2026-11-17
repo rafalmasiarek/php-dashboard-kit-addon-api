@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.3](https://github.com/rafalmasiarek/php-dashboard-kit-addon-api/compare/v1.2.2...v1.2.3) (2026-11-17)
+
+
+### Bug Fixes
+
+* rename includes to footer_includes in README.yml ([#15](https://github.com/rafalmasiarek/php-dashboard-kit-addon-api/issues/15)) ([3290c67](https://github.com/rafalmasiarek/php-dashboard-kit-addon-api/commit/3290c67039a49a4130f7d9285bfb00581acdd9fa))
+
 ## [1.2.2](https://github.com/rafalmasiarek/php-dashboard-kit-addon-api/compare/v1.2.1...v1.2.2) (2026-11-01)
 
 
