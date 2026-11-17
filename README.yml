@@ -2,7 +2,8 @@ name: dashboard-kit-addon-api
 repo_url: https://github.com/rafalmasiarek/php-dashboard-kit-addon-api
 license: BUSL-1.1
 license_change_date: "2099-01-01"
-license_contact: https://masiarek.pl/contact/?af_subject=Commercial+license+%E2%80%94+dashboard-kit-addon-api&af_message=Hello%2C+I+am+interested+in+a+commercial+license+for+dashboard-kit-addon-api.
+license_footer: |
+  For alternative licensing, [contact us](https://masiarek.pl/contact/?af_subject=Commercial+license+%E2%80%94+dashboard-kit-addon-api&af_message=Hello%2C+I+am+interested+in+a+commercial+license+for+dashboard-kit-addon-api.).
 
 badges:
   - name: Packagist Version
@@ -23,7 +24,7 @@ context:
   - |
     API plugin for [rafalmasiarek/dashboard-kit](https://github.com/rafalmasiarek/php-dashboard-kit). Adds Bearer token authentication with per-route scope enforcement, admin UI for token and scope management, user self-service token page, and a structured audit trail.
 
-includes:
+footer_includes:
   - docs/usage.md
   - docs/routing.md
   - docs/reference.md
